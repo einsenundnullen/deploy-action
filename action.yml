@@ -22,46 +22,59 @@ inputs:
   ssh-private-key:
     description: "SSH Private Key"
     required: true
+  working-directory:
+    description: "Optional working directory"
+    required: false
+    default: ./
 runs:
   using: "composite"
   steps:
     - id: register-repository-name
       run: echo ::set-env name=REPOSITORY_NAME::$(echo "${{ github.repository }}" | awk -F / '{print $2}' | sed -e "s/:refs//")
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: docker-login
       run: echo ${{ inputs.docker-password }} | docker login https://docker.pkg.github.com --username ${{ inputs.docker-user }} --password-stdin
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: docker-build
       run: docker build -t docker.pkg.github.com/${{ github.repository }}/$REPOSITORY_NAME:latest .
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: docker-push
       run: docker push docker.pkg.github.com/${{ github.repository }}/$REPOSITORY_NAME:latest
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: create-local-ssh-folder
       run: mkdir -p ~/.ssh
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: prepare-ssh-key
       run: |
         echo "${{ inputs.ssh-private-key }}" | sed '/^$/d' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: add-known-host
       run: ssh-keyscan -H ${{ inputs.ssh-host }} > ~/.ssh/known_hosts
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: create-remote-folder
       run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} mkdir -p $REPOSITORY_NAME
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: scp-docker-compose-file
       run: "scp ${{ inputs.docker-compose-file }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:$REPOSITORY_NAME/docker-compose.yml"
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: create-docker-env-file
       run: |
@@ -69,19 +82,24 @@ runs:
         ${{ inputs.docker-env-vars }}
         EOF"
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: docker-pull-latest
       run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} docker pull docker.pkg.github.com/${{ github.repository }}/$REPOSITORY_NAME:latest
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: docker-compose-up
       run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cd $REPOSITORY_NAME && IMAGE_TAG=latest docker-compose -f docker-compose.yml up -d"
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: remove-remote-folder
       run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} rm -rf $REPOSITORY_NAME
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
 
     - id: docker-system-prune
       run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} docker system prune -f
       shell: bash
+      working-directory: ${{ inputs.working-directory }}

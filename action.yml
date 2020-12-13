@@ -30,7 +30,7 @@ runs:
   using: "composite"
   steps:
     - id: register-repository-name
-      run: echo ::set-env name=REPOSITORY_NAME::$(echo "${{ github.repository }}" | awk -F / '{print $2}' | sed -e "s/:refs//")
+      run: echo REPOSITORY_NAME=$(echo "${{ github.repository }}" | awk -F / '{print $2}' | sed -e "s/:refs//") >> $GITHUB_ENV
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 

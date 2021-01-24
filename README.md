@@ -21,6 +21,7 @@ jobs:
         with:
           docker-user: ${{ github.repository_owner }}
           docker-password: ${{ secrets.GITHUB_TOKEN }}
+          docker-image-name: test-service
           docker-compose-file: docker-compose-prod.yml
           docker-env-vars: ${{ secrets.PROD_ENV }}
           ssh-user: ci

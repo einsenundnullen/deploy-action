@@ -10,6 +10,9 @@ inputs:
   docker-compose-file:
     description: "Docker Compose File"
     required: true
+  docker-image-name:
+    description: "Docker Image Name"
+    required: true
   docker-env-vars:
     description: "Docker Environment Variables"
     required: true
@@ -29,23 +32,18 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - id: register-repository-name
-      run: echo REPOSITORY_NAME=$(echo "${{ github.repository }}" | awk -F / '{print $2}' | sed -e "s/:refs//") >> $GITHUB_ENV
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-
     - id: docker-login
       run: echo ${{ inputs.docker-password }} | docker login https://docker.pkg.github.com --username ${{ inputs.docker-user }} --password-stdin
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: docker-build
-      run: docker build -t docker.pkg.github.com/${{ github.repository }}/$REPOSITORY_NAME:latest .
+      run: docker build -t docker.pkg.github.com/${{ github.repository }}/${{ inputs.docker-image-name }}:latest .
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: docker-push
-      run: docker push docker.pkg.github.com/${{ github.repository }}/$REPOSITORY_NAME:latest
+      run: docker push docker.pkg.github.com/${{ github.repository }}/${{ inputs.docker-image-name }}:latest
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
@@ -67,35 +65,35 @@ runs:
       working-directory: ${{ inputs.working-directory }}
 
     - id: create-remote-folder
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} mkdir -p $REPOSITORY_NAME
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} mkdir -p ${{ inputs.docker-image-name }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: scp-docker-compose-file
-      run: "scp ${{ inputs.docker-compose-file }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:$REPOSITORY_NAME/docker-compose.yml"
+      run: "scp ${{ inputs.docker-compose-file }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:${{ inputs.docker-image-name }}/docker-compose.yml"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: create-docker-env-file
       run: |
-        ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cat <<EOF > $REPOSITORY_NAME/env.prod
+        ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cat <<EOF > ${{ inputs.docker-image-name }}/env.prod
         ${{ inputs.docker-env-vars }}
         EOF"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: docker-pull-latest
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} docker pull docker.pkg.github.com/${{ github.repository }}/$REPOSITORY_NAME:latest
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} docker pull docker.pkg.github.com/${{ github.repository }}/${{ inputs.docker-image-name }}:latest
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: docker-compose-up
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cd $REPOSITORY_NAME && IMAGE_TAG=latest docker-compose -f docker-compose.yml up -d"
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cd ${{ inputs.docker-image-name }} && IMAGE_TAG=latest docker-compose -f docker-compose.yml up -d"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: remove-remote-folder
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} rm -rf $REPOSITORY_NAME
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} rm -rf ${{ inputs.docker-image-name }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 

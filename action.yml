@@ -1,6 +1,9 @@
 name: "Deploy"
 description: "Deploy using Docker and docker-compose"
 inputs:
+  docker-image-name:
+    description: "Docker Image Name"
+    required: true
   docker-compose-file:
     description: "Docker Compose File"
     required: true
@@ -41,35 +44,35 @@ runs:
       working-directory: ${{ inputs.working-directory }}
 
     - id: create-remote-folder
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} mkdir -p /tmp/deploy-action/${{ github.repository }}
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} mkdir -p /tmp/deploy-action/${{ inputs.docker-image-name }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: scp-docker-compose-file
-      run: "scp ${{ inputs.docker-compose-file }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:/tmp/deploy-action/${{ github.repository }}/docker-compose.yml"
+      run: "scp ${{ inputs.docker-compose-file }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:/tmp/deploy-action/${{ inputs.docker-image-name }}/docker-compose.yml"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: create-docker-env-file
       run: |
-        ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cat <<EOF > /tmp/deploy-action/${{ github.repository }}/env.prod
+        ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cat <<EOF > /tmp/deploy-action/${{ inputs.docker-image-name }}/env.prod
         ${{ inputs.docker-env-vars }}
         EOF"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: docker-pull-latest
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} docker pull ghcr.io/${{ github.repository }}:latest
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} docker pull ghcr.io/${{ github.repository }}/${{ inputs.docker-image-name }}:latest
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: docker-compose-up
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cd /tmp/deploy-action/${{ github.repository }} && IMAGE_TAG=latest docker-compose -f docker-compose.yml up -d"
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cd /tmp/deploy-action/${{ inputs.docker-image-name }} && IMAGE_TAG=latest docker-compose -f docker-compose.yml up -d"
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - id: remove-remote-folder
-      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} rm -rf /tmp/deploy-action/${{ github.repository }}
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} rm -rf /tmp/deploy-action/${{ inputs.docker-image-name }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 

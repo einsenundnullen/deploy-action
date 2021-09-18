@@ -58,6 +58,11 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
+    - id: docker-pull-latest
+      run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} docker pull ghcr.io/${{ github.repository }}:latest
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+
     - id: docker-compose-up
       run: ssh ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} "cd /tmp/deploy-action/${{ github.repository }} && IMAGE_TAG=latest docker-compose -f docker-compose.yml up -d"
       shell: bash
